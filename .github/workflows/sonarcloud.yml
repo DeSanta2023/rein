@@ -1,21 +1,17 @@
-#5
+#6 + sonar-project
 name: SonarCloud
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ master ]
   pull_request:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
-
-permissions:
-  pull-requests: read
+    branches: [ master ]
 
 jobs:
   build:
     name: Build and analyze
     runs-on: windows-latest
-    
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,34 +22,14 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Cache SonarCloud packages
-        uses: actions/cache@v3
-        with:
-          path: ~\sonar\cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
-
-      - name: Install SonarCloud scanner
-        run: |
-          dotnet tool install --global dotnet-sonarscanner --version 6.2.0
-        shell: powershell
-
-      - name: Restore dependencies
-        run: dotnet restore NetSdrClient.sln
-
-      - name: Begin SonarCloud analysis
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet sonarscanner begin /k:"ppanchen_NetSdrClient" /o:"ppanchen" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-        shell: powershell
+      - name: Restore
+        run: dotnet restore
 
       - name: Build
-        run: dotnet build NetSdrClient.sln --no-restore
+        run: dotnet build --configuration Release --no-restore
 
-      - name: End SonarCloud analysis
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
-        shell: powershell
